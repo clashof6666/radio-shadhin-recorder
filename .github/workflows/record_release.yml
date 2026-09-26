@@ -2,9 +2,9 @@ name: Record Stream and Create Release
 
 on:
   schedule:
-    # Thursday at 10:00 PM Bangladesh Standard Time (BST / UTC+6) is 16:00 UTC
+    # Thursday at 10:00 PM BST (16:00 UTC)
     - cron: '0 16 * * 4'
-  workflow_dispatch: # Allows manual trigger for testing
+  workflow_dispatch: # Manual trigger
 
 jobs:
   record_and_release:
@@ -18,9 +18,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Record Audio Stream (2 Hours 30 Minutes)
+      - name: Record Audio Stream (10 Second Test)
         run: |
-          # Generate date strings
           DATE_STR=$(date +'%Y-%m-%d')
           TIME_STR=$(date +'%Y-%m-%d_%H-%M')
           FILE_NAME="Radio_Shadhin_${TIME_STR}.aac"
@@ -28,18 +27,15 @@ jobs:
           echo "RECORD_DATE=$DATE_STR" >> $GITHUB_ENV
           echo "RECORD_FILE=$FILE_NAME" >> $GITHUB_ENV
 
-          # Record 9000 seconds (2 hours 30 mins) with direct copy (-c copy)
-          ffmpeg -i "https://stream-281.surfernetwork.com/umq9q5uuva5tv" -t 9000 -c copy "$FILE_NAME"
+          # Record 10 seconds for testing
+          ffmpeg -i "https://stream-281.surfernetwork.com/umq9q5uuva5tv" -t 10 -c copy "$FILE_NAME"
 
       - name: Create GitHub Release and Upload Audio
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "release-${{ env.RECORD_DATE }}"
-          name: "Radio Shadhin Recording - ${{ env.RECORD_DATE }}"
-          body: |
-            Automated recording of Radio Shadhin.
-            - **Date:** Thursday, ${{ env.RECORD_DATE }}
-            - **Duration:** 2 Hours 30 Minutes (10:00 PM - 12:30 AM BST)
+          tag_name: "test-release-${{ env.RECORD_DATE }}"
+          name: "Test Recording - ${{ env.RECORD_DATE }}"
+          body: "10-second test stream recording."
           draft: false
           prerelease: false
           files: "${{ env.RECORD_FILE }}"
