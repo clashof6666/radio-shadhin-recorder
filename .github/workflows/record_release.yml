@@ -20,25 +20,45 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
+      - name: Test Stream Reachability
+        run: |
+          curl -I --max-time 15 "https://stream-281.surfernetwork.com/umq9q5uuva5tv" || echo "WARNING: curl could not reach the stream. It may be blocked for cloud/datacenter IPs."
+
       - name: Record Audio Stream (10-Second Test)
         run: |
           DATE_TAG=$(date +'%Y-%m-%d_%H-%M-%S')
           FILE_NAME="Radio_Shadhin_${DATE_TAG}.aac"
-          
+
           echo "RECORD_TAG=$DATE_TAG" >> $GITHUB_ENV
           echo "RECORD_FILE=$FILE_NAME" >> $GITHUB_ENV
 
-          # Record 10 seconds. Added '-y' to overwrite safely.
-          ffmpeg -y -i "https://stream-281.surfernetwork.com/umq9q5uuva5tv" -t 10 -c copy "$FILE_NAME"
-          
-          # Verify the file was created successfully
+          # Re-encode instead of stream-copying, and allow reconnects on flaky live streams.
+          # Full ffmpeg output is saved to ffmpeg.log for debugging if this fails.
+          ffmpeg -y \
+            -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            -i "https://stream-281.surfernetwork.com/umq9q5uuva5tv" \
+            -t 10 -c:a aac -b:a 128k "$FILE_NAME" 2>&1 | tee ffmpeg.log
+
+          # Fail the step loudly (with a clear message) if no file was produced
+          if [ ! -s "$FILE_NAME" ]; then
+            echo "ERROR: Recording file was not created or is empty."
+            exit 1
+          fi
+
           ls -lh "$FILE_NAME"
+
+      - name: Upload FFmpeg Log (always, for debugging)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-log
+          path: ffmpeg.log
+          retention-days: 5
 
       - name: Create Release using Official GitHub CLI
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Uses GitHub's built-in tool to create the release and upload the file
           gh release create "release-${{ env.RECORD_TAG }}" "${{ env.RECORD_FILE }}" \
             --title "Radio Shadhin - ${{ env.RECORD_TAG }}" \
             --notes "Automated 10-second test recording."
