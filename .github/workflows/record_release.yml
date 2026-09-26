@@ -2,7 +2,7 @@ name: Record Stream and Create Release
 
 on:
   schedule:
-    - cron: '0 16 * * 4'
+    - cron: '0 16 * * 4'  # 10:00 PM Bangladesh Time (UTC+6) on Thursday
   workflow_dispatch:
 
 jobs:
@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    timeout-minutes: 180  # safety cap: 3 hours, above the 2h30m recording
 
     steps:
       - name: Checkout Repository
@@ -24,7 +25,7 @@ jobs:
         run: |
           curl -I --max-time 15 "https://stream-281.surfernetwork.com/umq9q5uuva5tv" || echo "WARNING: curl could not reach the stream. It may be blocked for cloud/datacenter IPs."
 
-      - name: Record Audio Stream (10-Second Test)
+      - name: Record Audio Stream (2 Hours 30 Minutes)
         run: |
           DATE_TAG=$(date +'%Y-%m-%d_%H-%M-%S')
           FILE_NAME="Radio_Shadhin_${DATE_TAG}.aac"
@@ -32,14 +33,12 @@ jobs:
           echo "RECORD_TAG=$DATE_TAG" >> $GITHUB_ENV
           echo "RECORD_FILE=$FILE_NAME" >> $GITHUB_ENV
 
-          # Re-encode instead of stream-copying, and allow reconnects on flaky live streams.
-          # Full ffmpeg output is saved to ffmpeg.log for debugging if this fails.
+          # 2 hours 30 minutes = 9000 seconds
           ffmpeg -y \
             -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -i "https://stream-281.surfernetwork.com/umq9q5uuva5tv" \
-            -t 10 -c:a aac -b:a 128k "$FILE_NAME" 2>&1 | tee ffmpeg.log
+            -t 9000 -c:a aac -b:a 128k "$FILE_NAME" 2>&1 | tee ffmpeg.log
 
-          # Fail the step loudly (with a clear message) if no file was produced
           if [ ! -s "$FILE_NAME" ]; then
             echo "ERROR: Recording file was not created or is empty."
             exit 1
@@ -61,4 +60,4 @@ jobs:
         run: |
           gh release create "release-${{ env.RECORD_TAG }}" "${{ env.RECORD_FILE }}" \
             --title "Radio Shadhin - ${{ env.RECORD_TAG }}" \
-            --notes "Automated 10-second test recording."
+            --notes "Automated 2h30m recording (Thursday 10:00 PM – Friday 12:30 AM)."
