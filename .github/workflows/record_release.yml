@@ -2,9 +2,8 @@ name: Record Stream and Create Release
 
 on:
   schedule:
-    # Thursday at 10:00 PM BST (16:00 UTC)
     - cron: '0 16 * * 4'
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch:
 
 jobs:
   record_and_release:
@@ -23,24 +22,23 @@ jobs:
 
       - name: Record Audio Stream (10-Second Test)
         run: |
-          # Generate unique timestamp
           DATE_TAG=$(date +'%Y-%m-%d_%H-%M-%S')
           FILE_NAME="Radio_Shadhin_${DATE_TAG}.aac"
           
           echo "RECORD_TAG=$DATE_TAG" >> $GITHUB_ENV
           echo "RECORD_FILE=$FILE_NAME" >> $GITHUB_ENV
 
-          # Record 10 seconds for testing
-          ffmpeg -i "https://stream-281.surfernetwork.com/umq9q5uuva5tv" -t 10 -c copy "$FILE_NAME"
+          # Record 10 seconds. We added '-y' to overwrite and ensured it captures standard output.
+          ffmpeg -y -i "https://stream-281.surfernetwork.com/umq9q5uuva5tv" -t 10 -c copy "$FILE_NAME"
+          
+          # Debugging step: List the file size to prove it was created successfully
+          ls -lh "$FILE_NAME"
 
-      - name: Create GitHub Release and Upload Audio
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "release-${{ env.RECORD_TAG }}"
-          name: "Radio Shadhin - ${{ env.RECORD_TAG }}"
-          body: "Automated recording of Radio Shadhin."
-          draft: false
-          prerelease: false
-          files: "${{ env.RECORD_FILE }}"
+      - name: Create Release using Official GitHub CLI
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Use GitHub's built-in tool to create the release and upload the file
+          gh release create "release-${{ env.RECORD_TAG }}" "${{ env.RECORD_FILE }}" \
+            --title "Radio Shadhin - ${{ env.RECORD_TAG }}" \
+            --notes "Automated 10-second test recording."
