@@ -13,18 +13,21 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Record Audio Stream (10 Second Test)
+      - name: Record Audio Stream (10-Second Test)
         run: |
-          DATE_STR=$(date +'%Y-%m-%d')
-          TIME_STR=$(date +'%Y-%m-%d_%H-%M')
-          FILE_NAME="Radio_Shadhin_${TIME_STR}.aac"
+          # Generate unique timestamp
+          DATE_TAG=$(date +'%Y-%m-%d_%H-%M-%S')
+          FILE_NAME="Radio_Shadhin_${DATE_TAG}.aac"
           
-          echo "RECORD_DATE=$DATE_STR" >> $GITHUB_ENV
+          echo "RECORD_TAG=$DATE_TAG" >> $GITHUB_ENV
           echo "RECORD_FILE=$FILE_NAME" >> $GITHUB_ENV
 
           # Record 10 seconds for testing
@@ -33,9 +36,9 @@ jobs:
       - name: Create GitHub Release and Upload Audio
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "test-release-${{ env.RECORD_DATE }}"
-          name: "Test Recording - ${{ env.RECORD_DATE }}"
-          body: "10-second test stream recording."
+          tag_name: "release-${{ env.RECORD_TAG }}"
+          name: "Radio Shadhin - ${{ env.RECORD_TAG }}"
+          body: "Automated recording of Radio Shadhin."
           draft: false
           prerelease: false
           files: "${{ env.RECORD_FILE }}"
